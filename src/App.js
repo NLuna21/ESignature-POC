@@ -5,10 +5,9 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import SignatureDraggable from "./components/SignatureDraggable";
 import { useDrop } from "react-dnd";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-// import 'react-pdf/dist/esm/Page/TextLayer.css';
-// import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import { PDFDocument } from 'pdf-lib';
+import MyPdfViewer from './components/MyPdfViewer';
+// import 'react-pdf/dist/esm/Page/TextLayer.css'
 import "./App.css";
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/5.3.31/pdf.worker.min.mjs`;
 
@@ -38,138 +37,54 @@ function UploadButton({ onFileSelect }) {
   );
 }
 
-function handleDownload() {
-  const viewer = document.querySelector('.pdf-capture-target');
-  if (!viewer) return alert("PDF viewer not found");
-
-  html2canvas(viewer, { scale: 2 }).then((canvas) => {
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'px',
-      format: [canvas.width, canvas.height],
-  });
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-    pdf.save('signed-document.pdf');
-  });
-}
-
-function MyPdfViewer({ selectedFile }) {
-  const [numPages, setNumPages] = useState(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [droppedItem, setDroppedItem] = useState(null);
-  const [signaturePosition, setSignaturePosition] = useState({ x: 100, y: 100 });
-
-   const [{ isOver }, dropRef] = useDrop(() => ({
-    accept: "SIGNATURE",
-    drop: (item) => {
-      setDroppedItem(item);
-      console.log("Dropped item:", item);
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
-  }));
-
-  const handleDocumentLoad = ({ numPages }) => {
-    setNumPages(numPages);
-    setPageNumber(1);
+async function handleDownloadWithPdfLib(file, signatureUrl, position, pdfHeight) {
+  if (!file || !signatureUrl || !position) {
+    alert("Missing PDF or signature.");
+    return;
   }
-  const handleDragStart = (e) => {
-    e.preventDefault();
-    let startX = e.clientX;
-    let startY = e.clientY;
 
-    const onMouseMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
+  const fileBytes = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(fileBytes);
+  const page = pdfDoc.getPages()[0]; // You can expand to target multiple pages
 
-      setSignaturePosition((prev) => ({
-        x: prev.x + deltaX,
-        y: prev.y + deltaY,
-      }));
+  const { x, y } = position;
 
-      startX = moveEvent.clientX;
-      startY = moveEvent.clientY;
-    };
+  if (signatureUrl.startsWith("data:image")) {
+    const imageBytes = await fetch(signatureUrl).then(res => res.arrayBuffer());
+    const signatureImage = await pdfDoc.embedPng(imageBytes);
+    const dims = signatureImage.scale(0.5);
 
-    const onMouseUp = () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
+    const imageWidth = dims.width;
+    const imageHeight = dims.height;
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
-  const [pageDims, setPageDims] = useState({ width: 0, height: 0 });
+    const pdfX = x;
+    const pdfY = pdfHeight - position.y - imageHeight;
 
+    page.drawImage(signatureImage, {
+      x: pdfX,
+      y: pdfY,
+      width: imageWidth,
+      height: imageHeight,
+    });
+  } else {
+    const textSize = 24;
+    page.drawText(signatureUrl, {
+      x,
+      y: page.getHeight() - y - textSize,
+      size: textSize,
+    });
+  }
 
-  return (
-    <div
-      ref={dropRef}
-      style={{
-        position: "relative",
-        zIndex: 1,
-        border: isOver ? "2px dashed green" : "1px solid #ccc",
-        padding: "1rem",
-        marginTop: "1rem",
-      }}
-    >
-      {selectedFile ? (
-        <>
-          <div className="pdf-capture-target" style={{ position: "relative"}}>
-            <Document
-              file={selectedFile}
-              onLoadSuccess={handleDocumentLoad}
-              onLoadError={(error) => {
-                console.error("PDF load error:", error);
-                alert("Failed to load PDF: " + error.message);
-              }}
-            >
-              <Page 
-              pageNumber={pageNumber}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              onRenderSuccess={(pageView) => {
-                const { width, height } = pageView;
-                setPageDims({ width, height });
-                console.log("Rendered page dimensions:", width, height);
-
-              }}
-              />
-            </Document>
-            {droppedItem && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: signaturePosition.y,
-                  left: signaturePosition.x,
-                  cursor: "move",
-                  width: pageDims.width,
-                  height: pageDims.height,
-                  zIndex: 10,
-                  pointerEvents: "auto",
-                }}
-                onMouseDown={handleDragStart}
-
-              >
-                {droppedItem.url.startsWith("data:image") ? (
-                  <img src={droppedItem.url} alt="Dropped signature" width={150} />
-                ) : (
-                  <div style={{ fontSize: "24px", fontWeight: "bold" }}>
-                    {droppedItem.url}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          </>
-        ) : (
-          <p>No file selected yet. Upload a PDF to begin.</p>
-        )}
-    </div>
-  );
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "signed-traditional.pdf";
+  link.click();
 }
+
+
+
 
 
 
@@ -178,9 +93,11 @@ export default function App() {
   const signRef = useRef(null);
   const [url, setUrl] = useState(""); //locally store signatures
   const [name, setName] = useState("");
-  const [uploadedImage, setUploadedImage] = useState(null);
+  const [setUploadedImage] = useState(null);
   const [signatureMode, setSignatureMode] = useState("draw"); //for radio buttons
   const [selectedFile, setSelectedFile] = useState(null);
+  const [signaturePosition, setSignaturePosition] = useState({ x: 100, y: 100 });
+  const [pageDims, setPageDims] = useState({ width: 0, height: 0, pdfHeight: 0 });
 
 
   const handleOpen = () => setShowModal(true);
@@ -244,11 +161,6 @@ export default function App() {
     setUrl(data);
     handleClose();
   };
-
-
-
-
-
   
   return (
     <DndProvider backend={HTML5Backend}>
@@ -268,8 +180,6 @@ export default function App() {
             <SignatureDraggable url={url} />
           </>
         )}
-
-
 
         {showModal && (
           <div className="modal-overlay">
@@ -328,8 +238,17 @@ export default function App() {
           </div>
         )}
       <UploadButton onFileSelect={setSelectedFile} />
-      <MyPdfViewer selectedFile={selectedFile} />
-      <button onClick={handleDownload}>📥 Download Signed PDF</button>
+      <MyPdfViewer 
+        selectedFile={selectedFile} 
+        signaturePosition={signaturePosition}
+        setSignaturePosition={setSignaturePosition}
+        setPageDims={setPageDims}
+      />
+      <button onClick={()=> handleDownloadWithPdfLib(selectedFile, url, signaturePosition, pageDims.pdfHeight)
+      }
+    >
+      Download Signed PDF
+    </button>
       </>
     </DndProvider>
   );
