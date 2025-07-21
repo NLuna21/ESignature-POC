@@ -92,11 +92,11 @@ const MyPdfViewer = ({ selectedFile, setPageDims, signaturePosition, setSignatur
                 zIndex: 10,
                 pointerEvents: 'auto',
                 cursor: 'move',
-                background: '#fff',
-                border: '2px solid #007bff',
+                // background: '#fff',
+                // border: '2px solid #007bff',
                 padding: '4px',
-                borderRadius: '4px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                // borderRadius: '4px',
+                // boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
               }}
               onMouseDown={handleDragStart}
             >
