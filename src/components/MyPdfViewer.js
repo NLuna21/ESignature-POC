@@ -92,7 +92,7 @@ const MyPdfViewer = ({ selectedFile, setPageDims, signaturePosition, setSignatur
                 zIndex: 10,
                 pointerEvents: 'auto',
                 cursor: 'move',
-                // background: '#fff',
+                //  background: '#fff',
                 // border: '2px solid #007bff',
                 padding: '4px',
                 // borderRadius: '4px',
