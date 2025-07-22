@@ -24,3 +24,4 @@ It correctly bundles React in production mode and optimizes the build for the be
 
 Checks the pdfjs ver.
 Standalone file, and file within react-pdf must be the same.
+
