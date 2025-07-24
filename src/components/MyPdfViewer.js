@@ -43,7 +43,7 @@ const MyPdfViewer = ({
     },
 }));
 
-  drop(dropRef); // connect drop logic to container
+  drop(dropRef);
 
   const handleDocumentLoad = ({ numPages }) => {
     setPageNumber(1);
