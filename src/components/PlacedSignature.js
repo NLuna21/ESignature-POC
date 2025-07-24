@@ -1,23 +1,15 @@
 import React from "react";
 import { useDrag } from "react-dnd";
 
-export default function PlacedSignature({ url, position, onPositionChange }) {
+export default function PlacedSignature({ url, position, onPositionChange, draggable}) {
   const [{ isDragging }, drag] = useDrag({
     type: "SIGNATURE_SLOT",
     item: { type: "SIGNATURE_SLOT", position },
-    end: (item, monitor) => {
-      const offset = monitor.getSourceClientOffset();
-      const container = document.getElementById("pdf-container")?.getBoundingClientRect();
-      if (offset && container) {
-        const x = offset.x - container.left;
-        const y = offset.y - container.top;
-        onPositionChange({ x, y });
-      }
-    },
+    canDrag: () => draggable, // ❌ disables drag completely
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
-    }),
-  });
+  }),
+});
 
   return (
     <div
@@ -28,7 +20,8 @@ export default function PlacedSignature({ url, position, onPositionChange }) {
         top: position.y,
         opacity: isDragging ? 0.5 : 1,
         zIndex: 10,
-        cursor: "move",
+        opacity: 0.5,
+        cursor: draggable ? "move" : "default",
         pointerEvents: "auto",
       }}
     >

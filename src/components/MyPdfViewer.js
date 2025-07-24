@@ -13,6 +13,8 @@ const MyPdfViewer = ({
   setSignatureFields,
   setActiveFieldId,
   handleOpenSignatureModal,
+  hasDroppedSignature,
+  setHasDroppedSignature,
 }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const dropRef = useRef(null);
@@ -20,26 +22,26 @@ const MyPdfViewer = ({
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'SIGNATURE_SLOT',
     drop: (item, monitor) => {
-      const offset = monitor.getClientOffset();
-      const bounds = dropRef.current?.getBoundingClientRect();
-      if (!offset || !bounds) return;
+      const offset = monitor.getSourceClientOffset();
+      const pdfRect = document.getElementById("pdf-container")?.getBoundingClientRect();
+      if (!offset || !pdfRect || hasDroppedSignature) return;
 
-      const x = offset.x - bounds.left;
-      const y = offset.y - bounds.top;
+
+      const x = offset.x - pdfRect.left;
+      const y = offset.y - pdfRect.top;
+      const adjustedY = y - 30;
 
       const newField = {
         id: `field-${Date.now()}`,
         x,
-        y,
-        url: item.url || null,
+        y: adjustedY,
+        url: null,
       };
 
       setSignatureFields((prev) => [...prev, newField]);
+      setHasDroppedSignature(true);
     },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
-  }));
+}));
 
   drop(dropRef); // connect drop logic to container
 
@@ -96,6 +98,7 @@ const MyPdfViewer = ({
                       )
                     );
                   }}
+                  draggable={false}
                 />
               ) : (
                 <SignaturePlaceholder

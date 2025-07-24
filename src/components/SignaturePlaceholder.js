@@ -44,7 +44,8 @@ export default function SignaturePlaceholder({
         justifyContent: 'center',
         cursor: 'move',
         zIndex: 10,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.5 : 0.8,
+        borderRadius: '14px',
       }}
       onClick={() => {
         setActiveFieldId(field.id);

@@ -96,6 +96,7 @@ export default function App() {
   const [pageDims, setPageDims] = useState({ width: 0, height: 0, pdfHeight: 0 });
   const [signatureFields, setSignatureFields] = useState([]);
   const [activeFieldId, setActiveFieldId] = useState(null);
+  const [hasDroppedSignature, setHasDroppedSignature] = useState(false);
 
   const handleOpenSignatureModal = () => setShowModal(true);
   const handleOpen = () => setShowModal(true);
@@ -244,6 +245,8 @@ export default function App() {
             signatureFields={signatureFields}
             setSignatureFields={setSignatureFields}
             setActiveFieldId={setActiveFieldId}
+            hasDroppedSignature={hasDroppedSignature}
+            setHasDroppedSignature={setHasDroppedSignature}
             handleOpenSignatureModal={() => setShowModal(true)}
           />
         </div>
